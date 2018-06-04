@@ -22,18 +22,20 @@ sem_t mutex;
 int tempo_backoff[NUMERO_TRANSMISSORES];
 int aleatorio[NUMERO_TRANSMISSORES];
 int enviarJam[NUMERO_TRANSMISSORES];
-int array[TAMANHO_MEIO];
-int array_destino[TAMANHO_MEIO];
 int arrayEmTransmissao[NUMERO_TRANSMISSORES];
 int	sinal[NUMERO_TRANSMISSORES];
 int emEspera[NUMERO_TRANSMISSORES];
+int avancouTudoEsquerda[NUMERO_TRANSMISSORES];
+int avancouTudoDireita[NUMERO_TRANSMISSORES];
+int matriz_transmissores[NUMERO_TRANSMISSORES][6];
+
+int array[TAMANHO_MEIO];
+int array_destino[TAMANHO_MEIO];
 int colisao = 0;
 pthread_mutex_t lock;
 pthread_mutex_t lock_meio;
 pthread_mutex_t lock_rand;
-int avancouTudoEsquerda[NUMERO_TRANSMISSORES];
-int avancouTudoDireita[NUMERO_TRANSMISSORES];
-int matriz_transmissores[NUMERO_TRANSMISSORES][6];
+
 int slot_time = 3;
 
 void *thread_result;
@@ -47,38 +49,38 @@ pthread_t threadSensing[NUMERO_TRANSMISSORES];
 void *sensing(void *j) {
     int i = *(int *)j;
     while(1) {
-    	
+
         verificarPacotesPraMim(i); //caso quem nao esteja transmitindo receba pacotes de jam
-        						// ou pacote de dados e ver se é pra ele mesmo
+        // ou pacote de dados e ver se é pra ele mesmo
         if (verificarMeio()==1) {
-           // emEspera[i]=1;
+            // emEspera[i]=1;
             sleep(2);
         }
-      
+
     }
 }
 void *meio(void *j) {
     int i = *(int *)j;
     while (1) {
-  		if (matriz_transmissores[i][TEMPO_BACKOFF]!=0){
-        		sleep(matriz_transmissores[i][TEMPO_BACKOFF]);
-        		matriz_transmissores[i][TEMPO_BACKOFF]=0;
-        		if (matriz_transmissores[i][NUM_COLISOES]==16){
-        		
-        			pthread_create(&transmissor[i], NULL, meio, &i);
-        			
-				}
-			}
-        if (verificarMeio()==0 && matriz_transmissores[i][TEMPO_BACKOFF]==0) { 
+        if (matriz_transmissores[i][TEMPO_BACKOFF]!=0) {
+            sleep(matriz_transmissores[i][TEMPO_BACKOFF]);
+            matriz_transmissores[i][TEMPO_BACKOFF]=0;
+            if (matriz_transmissores[i][NUM_COLISOES]==16) {
+
+                pthread_create(&transmissor[i], NULL, meio, &i);
+
+            }
+        }
+        if (verificarMeio()==0 && matriz_transmissores[i][TEMPO_BACKOFF]==0) {
             matriz_transmissores[i][TEMPO_BACKOFF] = 0;
             emEspera[i]=0;
             escreverMeio(i);
             avancarNoMeio(i);
-            if (enviarJam[i]==1){
-            	tacaJam(i);
-			}
+            if (enviarJam[i]==1) {
+                tacaJam(i);
+            }
             avancouTudoDireita[i]=0;
-          	avancouTudoEsquerda[i]=0;
+            avancouTudoEsquerda[i]=0;
             while (verificarSeAcabou()==0) {
                 sleep(1);
             }
@@ -88,9 +90,9 @@ void *meio(void *j) {
             arrayEmTransmissao[i]=0;
             sinal[i] = 1;
             sleep(3);
-        }else{
-        	emEspera[i]=1;
-		}
+        } else {
+            emEspera[i]=1;
+        }
     }
 }
 void avancarNoMeio(int i) {
@@ -109,23 +111,23 @@ void avancarNoMeio(int i) {
                 andarMeioEsquerda(i);
             } else {
                 avancouTudoEsquerda[i]=1;
-                 
+
             }
         }
 
     }
-    if (sinal[i]==1){
-                arrayEmTransmissao[i]=0;
-				matriz_transmissores[i][NUM_COLISOES]=0;
-				matriz_transmissores[i][POSICAO_ALVO]= randPosicaoAlvo(i);
-				printf("vamos mudar meu alvo para %d",matriz_transmissores[i][POSICAO_ALVO] );
-				sleep(10);
+    if (sinal[i]==1) {
+        arrayEmTransmissao[i]=0;
+        matriz_transmissores[i][NUM_COLISOES]=0;
+        matriz_transmissores[i][POSICAO_ALVO]= randPosicaoAlvo(i);
+        //	printf("vamos mudar meu alvo para %d",matriz_transmissores[i][POSICAO_ALVO] );
+        //sleep(10);
 
-				}else{
-					arrayEmTransmissao[i]=1;
-					avancouTudoEsquerda[i]=0;
-					avancouTudoDireita[i]=0;
-				}
+    } else {
+        arrayEmTransmissao[i]=1;
+        avancouTudoEsquerda[i]=0;
+        avancouTudoDireita[i]=0;
+    }
 }
 int verificarSeAcabou() {
     int k;
@@ -145,7 +147,7 @@ void tacaJam(i) {
     limparMeioDestino();
     avancouTudoDireita[i]=0;
     avancouTudoEsquerda[i]=0;
-    escreverMeio(i);   
+    escreverMeio(i);
     sleep(3);
     avancarNoMeio(i);
     arrayEmTransmissao[i]=0;
@@ -158,9 +160,9 @@ void andarMeioDireita(int i) {
         emitirJam(i);
         sleep(1);
     }
- pthread_mutex_lock(&lock);
+    pthread_mutex_lock(&lock);
     array[j+1]=sinal[i];
-     pthread_mutex_unlock(&lock);
+    pthread_mutex_unlock(&lock);
     array_destino[j+1]=matriz_transmissores[i][POSICAO_ALVO];
     sleep(slot_time);
     matriz_transmissores[i][POSICAO_MEIO_D] = j+1;
@@ -183,20 +185,20 @@ void andarMeioEsquerda(i) {
 
 }
 void backoff(i) {
-pthread_mutex_lock(&lock_rand);
+    pthread_mutex_lock(&lock_rand);
     matriz_transmissores[i][NUM_COLISOES]=matriz_transmissores[i][NUM_COLISOES]+1;
     tempo_backoff[i] = pow(2,matriz_transmissores[i][NUM_COLISOES]) * SLOT_TIME_ENVIO;
-    
+
     srand(time(NULL));
-	sleep(1);
+    sleep(1);
     aleatorio[i] = rand() % (tempo_backoff[i]);
-    
+
     sleep(1);
     matriz_transmissores[i][TEMPO_BACKOFF] = aleatorio[i];
 
     printf("\n Backoff para %d de tempo %d \n", i, matriz_transmissores[i][TEMPO_BACKOFF]);
-   sleep(1);
-   pthread_mutex_unlock(&lock_rand);
+    sleep(1);
+    pthread_mutex_unlock(&lock_rand);
 
 }
 void *interface() {
@@ -214,7 +216,7 @@ void *interface() {
 }
 void listaDeEspera() {
     int k;
-    
+
     printf("\n Transmissores em espera: ");
     for(k=0; k<NUMERO_TRANSMISSORES; k++) {
         if (emEspera[k]==1) {
@@ -237,18 +239,18 @@ void emTransmissao() {
     sleep(1);
 }
 int escreverMeio(int i) {
-   pthread_mutex_lock(&lock);
+    pthread_mutex_lock(&lock);
     arrayEmTransmissao[i]=1;
-    
+
     array[matriz_transmissores[i][POSICAO_MEIO]]=sinal[i];
-    
+
     array_destino[matriz_transmissores[i][POSICAO_MEIO]]= matriz_transmissores[i][POSICAO_ALVO];
     if (matriz_transmissores[i][POSICAO_MEIO]==0) {
         matriz_transmissores[i][POSICAO_MEIO_D]=matriz_transmissores[i][POSICAO_MEIO]+1;
         array[matriz_transmissores[i][POSICAO_MEIO_D]]=sinal[i];
         array_destino[matriz_transmissores[i][POSICAO_MEIO_D]]=matriz_transmissores[i][POSICAO_ALVO];
         matriz_transmissores[i][POSICAO_MEIO_E] = -1;
-        	sleep(2);
+        sleep(2);
     } else {
 
 
@@ -258,7 +260,7 @@ int escreverMeio(int i) {
             array_destino[matriz_transmissores[i][POSICAO_MEIO_E]]=matriz_transmissores[i][POSICAO_ALVO];
 
             matriz_transmissores[i][POSICAO_MEIO_D] = -1;
-            	sleep(2);
+            sleep(2);
         } else {
             matriz_transmissores[i][POSICAO_MEIO_E]=matriz_transmissores[i][POSICAO_MEIO]-1;
             matriz_transmissores[i][POSICAO_MEIO_D]=matriz_transmissores[i][POSICAO_MEIO]+1;
@@ -267,7 +269,7 @@ int escreverMeio(int i) {
             array_destino[matriz_transmissores[i][POSICAO_MEIO_D]]=matriz_transmissores[i][POSICAO_ALVO];
             array_destino[matriz_transmissores[i][POSICAO_MEIO_E]]=matriz_transmissores[i][POSICAO_ALVO];
 
-            	sleep(2);
+            sleep(2);
         }
     }
     pthread_mutex_unlock(&lock);
@@ -301,26 +303,26 @@ void mostrarMeio() {
     int tem=0;
     printf("\n [ ");
     for (i=0; i<TAMANHO_MEIO; i++) {
-    	tem =0;
-    	 for (k=0; k<NUMERO_TRANSMISSORES; k++) {
-     	if (matriz_transmissores[k][POSICAO_MEIO]==i){
-     		 printf("[%d]", k);
-     		 tem =1;
-		 }
-    	}
-    	if (tem==0){
-    		printf("[ ]");
-		}
-        
+        tem =0;
+        for (k=0; k<NUMERO_TRANSMISSORES; k++) {
+            if (matriz_transmissores[k][POSICAO_MEIO]==i) {
+                printf("[%d]", k);
+                tem =1;
+            }
+        }
+        if (tem==0) {
+            printf("[ ]");
+        }
+
     }
     printf(" ]\n");
 
-printf("\n [ ");
+    printf("\n [ ");
     for (i=0; i<TAMANHO_MEIO; i++) {
         printf(" %d ", array[i]);
     }
     printf(" ]\n");
-    
+
     printf("\n [ ");
     for (i=0; i<TAMANHO_MEIO; i++) {
         printf(" %d", array_destino[i]);
@@ -348,18 +350,18 @@ int verificarMeio() {
 
 void verificarPacotesPraMim(i) {
 
-    
-        if (array[matriz_transmissores[i][POSICAO_MEIO]]==-2 ) {
-          enviarJam[i]=1;
-            sleep(2);
-        } else if (array[matriz_transmissores[i][POSICAO_MEIO]]==1) {
-        	if (array_destino[matriz_transmissores[i][POSICAO_MEIO]]==matriz_transmissores[i][POSICAO_MEIO]) {
-        		
+
+    if (array[matriz_transmissores[i][POSICAO_MEIO]]==-2 ) {
+        enviarJam[i]=1;
+        sleep(2);
+    } else if (array[matriz_transmissores[i][POSICAO_MEIO]]==1) {
+        if (array_destino[matriz_transmissores[i][POSICAO_MEIO]]==matriz_transmissores[i][POSICAO_MEIO]) {
+
             printf("\n Eu, %d Recebi um pacote \n", i);
             sleep(3);
         }
-        }
-    
+    }
+
     if (array[matriz_transmissores[i][POSICAO_MEIO]]==-3 && matriz_transmissores[i][TEMPO_BACKOFF]==0) {
         printf("Eu, %d Recebi um pacote jam \n", i);
         backoff(i);
@@ -373,59 +375,52 @@ void preencherArrayDestino() {
     }
 }
 
-void mostrarEmBackoff(){
-	int j;
-	printf("\n \n Em backoff: ");
-	for ( j=0; j<NUMERO_TRANSMISSORES; j++) {
-       if(matriz_transmissores[j][TEMPO_BACKOFF] !=0){
-       	printf(" %d -", j);
-	   }
+void mostrarEmBackoff() {
+    int j;
+    printf("\n \n Em backoff: ");
+    for ( j=0; j<NUMERO_TRANSMISSORES; j++) {
+        if(matriz_transmissores[j][TEMPO_BACKOFF] !=0) {
+            printf(" %d -", j);
+        }
     }
 }
-void iniciarDados(){
-	int h;
-	for(h=0; h<NUMERO_TRANSMISSORES;h++){	    
-	    avancouTudoDireita[h]=0;
-	    avancouTudoEsquerda[h]=0;
-	    enviarJam[h]=0;
-	    sinal[h]=1;
-	}
+void iniciarDados() {
+    int h;
+    for(h=0; h<NUMERO_TRANSMISSORES; h++) {
+        avancouTudoDireita[h]=0;
+        avancouTudoEsquerda[h]=0;
+        enviarJam[h]=0;
+        sinal[h]=1;
+    }
 }
 
-void iniciarTransmissores(){
-	int h;
-	for (h=0;h<NUMERO_TRANSMISSORES;h++){
-	
-	matriz_transmissores[h][NUM_COLISOES]=0;
-    matriz_transmissores[h][POSICAO_MEIO]=h*(TAMANHO_MEIO/NUMERO_TRANSMISSORES);
-    matriz_transmissores[h][TEMPO_BACKOFF]=0;
-    
+void iniciarTransmissores() {
+    int h;
+    for (h=0; h<NUMERO_TRANSMISSORES; h++) {
+        matriz_transmissores[h][NUM_COLISOES]=0;
+        matriz_transmissores[h][POSICAO_MEIO]=h*(TAMANHO_MEIO/NUMERO_TRANSMISSORES);
+        matriz_transmissores[h][TEMPO_BACKOFF]=0;
+    }
+    for (h=0; h<NUMERO_TRANSMISSORES; h++) {
+        matriz_transmissores[h][POSICAO_ALVO]= randPosicaoAlvo(h);
+    }
 }
-	for (h=0;h<NUMERO_TRANSMISSORES;h++){
-		
-		matriz_transmissores[h][POSICAO_ALVO]= randPosicaoAlvo(h);
-
-}
-  
-}
-
-int randPosicaoAlvo(i){
-	int transmissorAleatorio;
-	do{
-		transmissorAleatorio = rand()%NUMERO_TRANSMISSORES-1;
-	}while(transmissorAleatorio==i);
-	return matriz_transmissores[transmissorAleatorio][POSICAO_MEIO];
-	
+int randPosicaoAlvo(i) {
+    int transmissorAleatorio;
+    do {
+        transmissorAleatorio = rand()%NUMERO_TRANSMISSORES-1;
+    } while(transmissorAleatorio==i);
+    return matriz_transmissores[transmissorAleatorio][POSICAO_MEIO];
 }
 main() {
-iniciarTransmissores();
+    iniciarTransmissores();
 
 
-iniciarDados();
+    iniciarDados();
     preencherArrayDestino();
-pthread_mutex_init(&lock, NULL);
-pthread_mutex_init(&lock_meio, NULL);
-pthread_mutex_init(&lock_rand, NULL);
+    pthread_mutex_init(&lock, NULL);
+    pthread_mutex_init(&lock_meio, NULL);
+    pthread_mutex_init(&lock_rand, NULL);
     int i=0;
     pthread_create(&threadInterface, NULL, interface, NULL);
 
