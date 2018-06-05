@@ -1,5 +1,4 @@
-//backoff
-//threads são pacotes que tentarão acessar o meio
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
@@ -8,7 +7,7 @@
 #include <time.h>
 
 
-#define NUMERO_TRANSMISSORES 2
+#define NUMERO_TRANSMISSORES 4
 #define SLOT_TIME_ENVIO 1
 #define NUM_COLISOES 0    //0 - numero de colisoes
 #define POSICAO_MEIO 1    //1 - posição no meio
@@ -16,7 +15,7 @@
 #define POSICAO_ALVO 3    //3 - posicao alvo
 #define POSICAO_MEIO_D 4  //4 - posição no meio da direita
 #define POSICAO_MEIO_E 5  //5 - posição no meio da esquerda
-#define TAMANHO_MEIO 16
+#define TAMANHO_MEIO 18
 
 int tempo_backoff[NUMERO_TRANSMISSORES];
 int aleatorio[NUMERO_TRANSMISSORES];
@@ -52,13 +51,14 @@ void *sensing(void *j) {
         verificarPacotesPraMim(i); //caso quem nao esteja transmitindo receba pacotes de jam
         // ou pacote de dados e ver se é pra ele mesmo
         if (verificarMeio()==1) {
-             emEspera[i]=1;
+            emEspera[i]=1;
             sleep(1);
         }
         if (matriz_transmissores[i][TEMPO_BACKOFF]>0){
 		sleep(1);
 		matriz_transmissores[i][TEMPO_BACKOFF]=matriz_transmissores[i][TEMPO_BACKOFF]-1;
 		}
+		
 
     }
 }
@@ -68,12 +68,13 @@ void *meio(void *j) {
        /* if (matriz_transmissores[i][TEMPO_BACKOFF]!=0) {
             sleep(matriz_transmissores[i][TEMPO_BACKOFF]);
             matriz_transmissores[i][TEMPO_BACKOFF]=0;
-            if (matriz_transmissores[i][NUM_COLISOES]==16) {
+            
+        } */
+        if (matriz_transmissores[i][NUM_COLISOES]==16) {
 
                 pthread_create(&transmissor[i], NULL, meio, &i);
 
             }
-        } */
         if (verificarMeio()==0 && matriz_transmissores[i][TEMPO_BACKOFF]==0) {
             matriz_transmissores[i][TEMPO_BACKOFF] = 0;
             emEspera[i]=0;
@@ -123,7 +124,7 @@ void avancarNoMeio(int i) {
         arrayEmTransmissao[i]=0;
         matriz_transmissores[i][NUM_COLISOES]=0;
         matriz_transmissores[i][POSICAO_ALVO]= randPosicaoAlvo(i);
-        //	printf("vamos mudar meu alvo para %d",matriz_transmissores[i][POSICAO_ALVO] );
+       // printf("vamos mudar meu alvo para %d",matriz_transmissores[i][POSICAO_ALVO] );
         //sleep(10);
 
     } else {
@@ -191,7 +192,7 @@ void andarMeioEsquerda(i) {
 void backoff(i) {
     pthread_mutex_lock(&lock_rand);
     matriz_transmissores[i][NUM_COLISOES]=matriz_transmissores[i][NUM_COLISOES]+1;
-    tempo_backoff[i] = pow(2,matriz_transmissores[i][NUM_COLISOES]) * SLOT_TIME_ENVIO;
+    tempo_backoff[i] = (pow(2,matriz_transmissores[i][NUM_COLISOES])-1) * SLOT_TIME_ENVIO;
 
     srand(time(NULL));
     sleep(1);
@@ -235,7 +236,7 @@ void emTransmissao() {
     printf("\n Em transmissao: ");
     for(i=0; i<NUMERO_TRANSMISSORES; i++) {
         if (arrayEmTransmissao[i]==1) {
-            printf("\n ---> %d", i);
+            printf("\n %d ---> %d", i, matriz_transmissores[i][POSICAO_ALVO]);
         }
 
     }
@@ -328,15 +329,27 @@ void mostrarMeio() {
 	  
 	
 	int tem;
+	int m;
 	 printf(" ]\n");
 //	printf("\n");
 	 printf("\n [ ");
+	
     for (i=0; i<TAMANHO_MEIO; i++) {
         tem =0;
         for (k=0; k<NUMERO_TRANSMISSORES; k++) {
-
+int alvo = 0;
             if (matriz_transmissores[k][POSICAO_MEIO]==i) {
-                printf("[%d]", k);
+            	if (arrayEmTransmissao[k]==1){
+            		for (m=0; m<NUMERO_TRANSMISSORES; m++) {
+            			if (matriz_transmissores[k][POSICAO_ALVO]==matriz_transmissores[m][POSICAO_MEIO]){
+            				 alvo = m;
+						}
+            		}
+            		printf("[%d*%d]", k,alvo );
+				}else{
+					printf("[%d]", k);
+				}
+                
                 tem =1;
             }
         }
@@ -349,7 +362,12 @@ void mostrarMeio() {
 
     printf("\n [ ");
     for (i=0; i<TAMANHO_MEIO; i++) {
-        printf(" %d ", array[i]);
+    	if (array[i]<0){
+    		printf(" %d", array[i]);
+		}else{
+			printf(" %d ", array[i]);
+		}
+        
     }
     printf(" ]\n");
 
@@ -366,7 +384,7 @@ int verificarMeio() {
     int res = 0 ;
     int i;
     int k;
-    for (i=2; i<8; i++) {
+    for (i=0; i<TAMANHO_MEIO; i++) {
 
         if (array[i]==0) {
             res = 0;
