@@ -8,7 +8,7 @@
 
 
 #define NUMERO_TRANSMISSORES 3
-#define MARGEM_ERRO 4
+#define MARGEM_ERRO 3
 #define TAMANHO_MEIO 10
 
 #define NUM_COLISOES 0    //0 - numero de colisoes
@@ -17,7 +17,7 @@
 #define POSICAO_ALVO 3    //3 - posicao alvo
 #define POSICAO_MEIO_D 4  //4 - posição no meio da direita
 #define POSICAO_MEIO_E 5  //5 - posição no meio da esquerda
-
+#define INFORMACAO 6
 
 int tempo_backoff[NUMERO_TRANSMISSORES];
 int aleatorio[NUMERO_TRANSMISSORES];
@@ -27,7 +27,7 @@ int	sinal[NUMERO_TRANSMISSORES];
 int emEspera[NUMERO_TRANSMISSORES];
 int avancouTudoEsquerda[NUMERO_TRANSMISSORES];
 int avancouTudoDireita[NUMERO_TRANSMISSORES];
-int matriz_transmissores[NUMERO_TRANSMISSORES][6];
+int matriz_transmissores[NUMERO_TRANSMISSORES][7];
 
 int array[TAMANHO_MEIO];
 int array_destino[TAMANHO_MEIO];
@@ -52,7 +52,7 @@ void *sensing(void *j) {
         verificarPacotesPraMim(i);
         if (verificarMeio()==1) {
             emEspera[i]=1;
-            sleep(1);
+            sleep(2);
         } else {
             emEspera[i]=0;
         }
@@ -84,9 +84,8 @@ void *meio(void *j) {
             sinal[i] = 1;
         }
         if (matriz_transmissores[i][NUM_COLISOES]==16) {
-
+        	novoPacote(i);
             pthread_create(&transmissor[i], NULL, meio, &i);
-
         }
     }
 }
@@ -110,15 +109,19 @@ void avancarNoMeio(int i) {
     }
     if (sinal[i]==1) {
         //Se ocorreu tudo bem na transmissão, reinicio o transmissor para um novo pacote/alvo
-        arrayEmTransmissao[i]=0;
-        matriz_transmissores[i][NUM_COLISOES]=0;
-        if (NUMERO_TRANSMISSORES>2) {
-            matriz_transmissores[i][POSICAO_ALVO]= randPosicaoAlvo(i);
-        }
+        novoPacote(i);
     } else {
         arrayEmTransmissao[i]=1;
         avancouTudoEsquerda[i]=0;
         avancouTudoDireita[i]=0;
+    }
+}
+void novoPacote(i){
+	arrayEmTransmissao[i]=0;
+    matriz_transmissores[i][NUM_COLISOES]=0;
+    matriz_transmissores[i][INFORMACAO]= retirarBuffer(i);
+    if (NUMERO_TRANSMISSORES>2) {
+        matriz_transmissores[i][POSICAO_ALVO]= randPosicaoAlvo(i);
     }
 }
 int transmissoresExecutando() {
@@ -199,6 +202,8 @@ void backoff(i) {
 void *interface() {
     while(1) {
         system("@cls||clear");
+        emTransmissao();
+        printf("_________________________________________ \n");
         mostrarMeio();
         sleep(1);
     }
@@ -290,7 +295,7 @@ void mostrarMeio() {
 
     int tem;
     int m;
-    printf(" ]\n");
+    printf(" ]            - Backoff\n");
 
     printf("\n [ ");
 
@@ -318,7 +323,7 @@ void mostrarMeio() {
         }
 
     }
-    printf(" ]\n");
+    printf(" ]            - transmissores\n");
 
     printf("\n [ ");
     for (i=0; i<TAMANHO_MEIO; i++) {
@@ -329,13 +334,13 @@ void mostrarMeio() {
         }
 
     }
-    printf(" ]\n");
+    printf(" ]            - Meio\n");
 
     printf("\n [ ");
     for (i=0; i<TAMANHO_MEIO; i++) {
         printf(" %d", array_destino[i]);
     }
-    printf(" ]\n");
+    printf(" ]            - Alvo\n");
     sleep(1);
 }
 
@@ -358,6 +363,18 @@ int verificarMeio() {
     return res;
 }
 
+void emTransmissao() {
+    int i;
+    printf("\n Transmissor  |   Pacote  | Colisoes");
+    for(i=0; i<NUMERO_TRANSMISSORES; i++) {
+        if (arrayEmTransmissao[i]==1) {
+    printf("\n        %d     |   %d       |   %d", i, matriz_transmissores[i][INFORMACAO], matriz_transmissores[i][NUM_COLISOES]);
+        }
+
+    }
+    printf(" \n");
+   // sleep(1);
+ }
 void verificarPacotesPraMim(i) {
 
     if (array[matriz_transmissores[i][POSICAO_MEIO]]==1) {
@@ -392,6 +409,7 @@ void iniciarTransmissores() {
         matriz_transmissores[h][NUM_COLISOES]=0;
         matriz_transmissores[h][POSICAO_MEIO]=h*(TAMANHO_MEIO/NUMERO_TRANSMISSORES);
         matriz_transmissores[h][TEMPO_BACKOFF]=0;
+        matriz_transmissores[h][INFORMACAO]= 0;
     }
     if (NUMERO_TRANSMISSORES==2) {
         matriz_transmissores[0][POSICAO_ALVO]= matriz_transmissores[1][POSICAO_MEIO];
@@ -408,10 +426,13 @@ int randPosicaoAlvo(i) {
     int transmissorAleatorio;
     srand(time(NULL));
     do {
-
-        transmissorAleatorio = rand()% (NUMERO_TRANSMISSORES-1);
+    	transmissorAleatorio = rand()% (NUMERO_TRANSMISSORES-1);
     } while(transmissorAleatorio==i);
     return matriz_transmissores[transmissorAleatorio][POSICAO_MEIO];
+}
+int retirarBuffer(h){
+	int retorno = matriz_transmissores[h][INFORMACAO] + 10;
+	return retorno;
 }
 main() {
     iniciarTransmissores();
